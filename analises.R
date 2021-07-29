@@ -64,7 +64,7 @@ grupos <-
     "Engajamento" = c(36:44)
   )
 
-# Redes
+# Arrumando argumentos iniciais
 itens_antes <- df_antes %>% select(MarP01_E:UWES09Ab)
 nomes_dos_itens <- c('P1_E', 'P2_S', 'P3_C', 'P4_N', 'P5_A',
                      'P6_E', 'P7_S', 'P8_C', 'P9_N', 'P10_A',
@@ -78,6 +78,7 @@ nomes_dos_itens <- c('P1_E', 'P2_S', 'P3_C', 'P4_N', 'P5_A',
 
 names(itens_antes) <- nomes_dos_itens
 
+# Estimando rede
 network_antes <- estimateNetwork(itens_antes,
                                  default = 'EBICglasso')
 
@@ -98,6 +99,7 @@ boot1 <- bootnet(network_antes,
                  nBoots = 2500,
                  nCores = 8)
 
+# Intervalos de confiança para arestas
 plot(boot1, labels = F,
      order = "sample")
 
@@ -112,14 +114,15 @@ boot2 <- bootnet(network_antes,
                    'strength',
                    'expectedInfluence'))
 
-# Quais diferenças de influência esperada são significativas?
+# Há estabilidade nos índices de estabilidade? (ideal acima de 0.5)
+corStability(boot2, statistics = "all", verbose = T)
+
+# Estabilidade dos índices de centralidade (apenas acima de 0.5)
 plot(boot2, "all")
 
 centralityPlot(network_antes,
                include = c('Strength', 'ExpectedInfluence'),
                orderBy = 'ExpectedInfluence')
-
-corStability(boot2, statistics = "all", verbose = T)
 
 # Criando Rede 2 - Durante a pandemia ====
 grupos <-
@@ -133,9 +136,8 @@ grupos <-
     "Engajamento" = c(36:44)
   )
 
-# Rede
+# Arrumando argumentos iniciais
 itens_durante <- df_durante %>% select(MarP01_E:UWES09Ab)
-
 nomes_dos_itens <- c('P1_E', 'P2_S', 'P3_C', 'P4_N', 'P5_A',
                      'P6_E', 'P7_S', 'P8_C', 'P9_N', 'P10_A',
                      'P11_E', 'P12_S', 'P13_C', 'P14_N', 'P15_A',
@@ -148,12 +150,13 @@ nomes_dos_itens <- c('P1_E', 'P2_S', 'P3_C', 'P4_N', 'P5_A',
 
 names(itens_durante) <- nomes_dos_itens
 
+# Estimando rede
 network_durante <- estimateNetwork(itens_durante,
                                    default = 'EBICglasso')
 
 # Plot da rede
 plot(network_durante,
-     layout = averageLayout(network_antes), # mesmo layout
+     layout = averageLayout(network_antes), # mesmo layout de network_antes
      groups = grupos,
      theme = 'colorblind',
      labels = colnames(itens_antes),
@@ -161,7 +164,19 @@ plot(network_durante,
      #filetype = 'png',
      width = 1.4 * 5,
      height = 5,
-     maximum = 0.658676) # max(abs(getWmat(network_antes)))
+     maximum = 0.658676) # valor obtido com max(abs(network_antes$graph))
+
+# Investigando acurácia da rede 2 - Pt. 1: BCa for edge weights ====
+boot1 <- bootnet(network_durante,
+                 type = 'nonparametric', # tipo de bootstrapping
+                 nBoots = 2500,
+                 nCores = 8)
+
+# Intervalos de confiança para arestas
+plot(boot1, labels = F,
+     order = "sample")
+
+print(boot1)
 
 # Investigando acurácia da rede 2 - Pt. 2: centrality stability ====
 boot2 <- bootnet(network_durante,
@@ -172,14 +187,12 @@ boot2 <- bootnet(network_durante,
                    'strength',
                    'expectedInfluence'))
 
-plot(boot2, 'all')
-
-# Quais diferenças de influência esperada são significativas?
-plot(boot2, "strength", orderBy = 'strength')
-
-centralityPlot(network_durante,
-               include = c('Strength', 'ExpectedInfluence'),
-               orderBy = 'ExpectedInfluence')
-
+# Há estabilidade nos índices de estabilidade? (ideal acima de 0.5)
 corStability(boot2, statistics = "all", verbose = T)
 
+# Estabilidade dos índices de centralidade (apenas acima de 0.5)
+plot(boot2, "all")
+
+centralityPlot(network_antes,
+               include = c('Strength', 'ExpectedInfluence'),
+               orderBy = 'ExpectedInfluence')
