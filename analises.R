@@ -22,6 +22,7 @@ load_libraries <- function(){
 }
 load_libraries()
 
+# Lendo e limpando banco
 df <- foreign::read.spss('bancos\\banco.sav',
                          to.data.frame = T,
                          use.value.labels = F)
@@ -30,21 +31,6 @@ df %<>% drop_na(MarP01_E:UWES09Ab)
 
 df_antes <- df %>% filter(Antes_Covid == 2)
 df_durante <- df %>% filter(Antes_Covid == 1)
-
-# Análises iniciais ====
-cors <- cor_auto(df)
-
-corrplot(
-  cors,
-  method = 'color',
-  diag = T,
-  type = 'lower',
-  tl.col = "black",
-  tl.srt = 45,
-  addCoef.col = "black",
-  tl.cex = .7,
-  number.cex = .5
-)
 
 # Create a APA correlation table ====
 apaTables::apa.cor.table(df, filename = "Correlation_Tables.doc",
