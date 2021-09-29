@@ -1,6 +1,8 @@
 # Inicialização ====
 # Loading libraries
 load_libraries <- function(){
+  if (!require("apaTables"))
+    install.packages("apaTables"); library(apaTables)
   if (!require("bootnet"))
     install.packages("bootnet"); library(bootnet)
   if (!require("corrplot"))
@@ -13,6 +15,8 @@ load_libraries <- function(){
     install.packages("lmf"); library(lmf)
   if(!require("magrittr"))
     install.packages("magrittr"); library(magrittr) 
+  if(!require("NetworkComparisonTest"))
+    install.packages("NetworkComparisonTest"); library(NetworkComparisonTest) 
   if(!require("psych"))
     install.packages("psych"); library(psych)
   if(!require("qgraph"))
@@ -182,3 +186,23 @@ plot(boot2, "all")
 centralityPlot(network_antes,
                include = c('Strength', 'ExpectedInfluence'),
                orderBy = 'ExpectedInfluence')
+
+# Correlacionando matrizes das redes ====
+cor(c(network_antes$graph), c(network_durante$graph))
+
+# 0.8395139
+
+# Comparando as redes Pt. 1 - Redes como um todo ====
+nct_results <- NCT(network_antes, network_durante, it = 1000)
+
+nct_results
+
+# Plots
+plot(nct_results, what = "network")
+plot(nct_results, what = "strength")
+
+
+
+
+
+
