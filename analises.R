@@ -1,14 +1,14 @@
 # Inicialização ====
 # Loading libraries
 load_libraries <- function(){
-  if (!require("apaTables"))
-    install.packages("apaTables"); library(apaTables)
   if (!require("bootnet"))
     install.packages("bootnet"); library(bootnet)
   if (!require("corrplot"))
     install.packages("corrplot"); library(corrplot)
   if (!require("dplyr"))
     install.packages("dplyr"); library(dplyr)
+  if (!require("export"))
+    install.packages("export"); library(export) 
   if (!require("ggplot2"))
     install.packages("ggplot2"); library(ggplot2)
   if(!require("lmf"))
@@ -36,35 +36,81 @@ df %<>% drop_na(MarP01_E:UWES09Ab)
 df_antes <- df %>% filter(Antes_Covid == 2)
 df_durante <- df %>% filter(Antes_Covid == 1)
 
-# Create a APA correlation table ====
-apaTables::apa.cor.table(df, filename = "Correlation_Tables.doc",
-                         table.number = 1,
-                         show.conf.interval = F,
-                         landscape = T)
+# Código para comparar centralidade ====
+compareCentrality <- function(net1, net2,
+                              include = c("Strength",
+                                          "Closeness",
+                                          "Betweenness",
+                                          "ExpectedInfluence",
+                                          "all",
+                                          "All"),
+                              orderBy = c("Strength",
+                                          "Closeness",
+                                          "Betweenness",
+                                          "ExpectedInfluence"),
+                              decreasing = T,
+                              legendName = '',
+                              net1Name = 'Network 1',
+                              net2Name = 'Network 2'){
+  
+  library(ggplot2)
+  library(forcats)
+  
+  if(include == "All" | include == "all"){
+    include = c("Strength",
+                "Closeness",
+                "Betweenness",
+                "ExpectedInfluence")
+  }
+  df <- centralityTable(net1, net2) %>% filter(measure %in% include)
+  
+  df %>% 
+    mutate(graph = case_when(graph == 'graph 1' ~ net1Name,
+                             graph == 'graph 2' ~ net2Name),
+           graph = as.factor(graph),
+           node = as.factor(node)) %>% 
+    
+    mutate(node = fct_reorder(node, value)) %>% 
+    
+    ggplot(aes(x = node, y = value, group = graph)) +
+    
+    geom_line(aes(linetype = graph), size = 1) +
+    
+    labs(x = '', y = '') +
+    
+    scale_linetype_discrete(name = legendName) +
+    
+    coord_flip() +
+    
+    facet_grid(~measure) +
+    
+    theme_bw()
+  
+}
 
 # Criando Rede 1 - Antes da pandemia ====
 grupos <-
   list(
-    "Extroversão" = c(1, 6, 11, 16, 21),
+    "Extroversao" = c(1, 6, 11, 16, 21),
     "Amabilidade" = c(2, 7, 12, 17, 22),
     "Conscienciosidade" = c(3, 8, 13, 18, 23),
     "Neuroticismo" = c(4, 9, 14, 19, 24),
     "Abertura" = c(5, 10, 15, 20, 25),
-    "Sentido no Trabalho" = c(26:35),
+    "Trabalho Significativo" = c(26:35),
     "Engajamento" = c(36:44)
   )
 
 # Arrumando argumentos iniciais
 itens_antes <- df_antes %>% select(MarP01_E:UWES09Ab)
-nomes_dos_itens <- c('P1_E', 'P2_S', 'P3_C', 'P4_N', 'P5_A',
-                     'P6_E', 'P7_S', 'P8_C', 'P9_N', 'P10_A',
-                     'P11_E', 'P12_S', 'P13_C', 'P14_N', 'P15_A',
-                     'P16_E', 'P17_S', 'P18_C', 'P19_N', 'P20_A',
-                     'P21_E', 'P22_S', 'P23_C', 'P24_N', 'P25_A',
-                     'WAMI1', 'WAMI2', 'WAMI3', 'WAMI4', 'WAMI5',
-                     'WAMI6', 'WAMI7', 'WAMI8', 'WAMI9', 'WAMI10',
-                     'E1_Vi', 'E2_Vi', 'E3_De', 'E4_De', 'E5_Vi',
-                     'E6_Ab', 'E7_De', 'E8_Ab', 'E9_Ab')
+nomes_dos_itens <- c('Ex1', 'Am1', 'Co1', 'Ne1', 'Ab1',
+                     'Ex2', 'Am2', 'Co2', 'Ne2', 'Ab2',
+                     'Ex3', 'Am3', 'Co3', 'Ne3', 'Ab3',
+                     'Ex4', 'Am4', 'Co4', 'Ne4', 'Ab4',
+                     'Ex5', 'Am5', 'Co5', 'Ne5', 'Ab5',
+                     'TS1', 'TS2', 'TS3', 'TS4', 'TS5',
+                     'TS6', 'TS7', 'TS8', 'TS9', 'TS10',
+                     'Eng1', 'Eng2', 'Eng3', 'Eng4', 'Eng5',
+                     'Eng6', 'Eng7', 'Eng8', 'Eng9')
 
 names(itens_antes) <- nomes_dos_itens
 
@@ -76,12 +122,14 @@ network_antes <- estimateNetwork(itens_antes,
 plot(network_antes,
      layout = "spring",
      groups = grupos,
-     theme = 'colorblind',
+     theme = 'gray',
      labels = colnames(itens_antes),
-     filename = 'figuras\\rede_1',
-     filetype = 'png',
+     #filename = 'figuras\\rede_1',
+     #filetype = 'png',
      width = 1.4 * 5,
      height = 5)
+
+graph2ppt(file = 'network_antes')
 
 # Investigando acurácia da rede 1 - Pt. 1: BCa for edge weights ====
 boot1 <- bootnet(network_antes,
@@ -117,26 +165,26 @@ centralityPlot(network_antes,
 # Criando Rede 2 - Durante a pandemia ====
 grupos <-
   list(
-    "Extroversão" = c(1, 6, 11, 16, 21),
+    "Extroversao" = c(1, 6, 11, 16, 21),
     "Amabilidade" = c(2, 7, 12, 17, 22),
     "Conscienciosidade" = c(3, 8, 13, 18, 23),
     "Neuroticismo" = c(4, 9, 14, 19, 24),
     "Abertura" = c(5, 10, 15, 20, 25),
-    "Sentido no Trabalho" = c(26:35),
+    "Trabalho Significativo" = c(26:35),
     "Engajamento" = c(36:44)
   )
 
 # Arrumando argumentos iniciais
 itens_durante <- df_durante %>% select(MarP01_E:UWES09Ab)
-nomes_dos_itens <- c('P1_E', 'P2_S', 'P3_C', 'P4_N', 'P5_A',
-                     'P6_E', 'P7_S', 'P8_C', 'P9_N', 'P10_A',
-                     'P11_E', 'P12_S', 'P13_C', 'P14_N', 'P15_A',
-                     'P16_E', 'P17_S', 'P18_C', 'P19_N', 'P20_A',
-                     'P21_E', 'P22_S', 'P23_C', 'P24_N', 'P25_A',
-                     'WAMI1', 'WAMI2', 'WAMI3', 'WAMI4', 'WAMI5',
-                     'WAMI6', 'WAMI7', 'WAMI8', 'WAMI9', 'WAMI10',
-                     'E1_Vi', 'E2_Vi', 'E3_De', 'E4_De', 'E5_Vi',
-                     'E6_Ab', 'E7_De', 'E8_Ab', 'E9_Ab')
+nomes_dos_itens <- c('Ex1', 'Am1', 'Co1', 'Ne1', 'Ab1',
+                     'Ex2', 'Am2', 'Co2', 'Ne2', 'Ab2',
+                     'Ex3', 'Am3', 'Co3', 'Ne3', 'Ab3',
+                     'Ex4', 'Am4', 'Co4', 'Ne4', 'Ab4',
+                     'Ex5', 'Am5', 'Co5', 'Ne5', 'Ab5',
+                     'TS1', 'TS2', 'TS3', 'TS4', 'TS5',
+                     'TS6', 'TS7', 'TS8', 'TS9', 'TS10',
+                     'Eng1', 'Eng2', 'Eng3', 'Eng4', 'Eng5',
+                     'Eng6', 'Eng7', 'Eng8', 'Eng9')
 
 names(itens_durante) <- nomes_dos_itens
 
@@ -148,13 +196,15 @@ network_durante <- estimateNetwork(itens_durante,
 plot(network_durante,
      layout = averageLayout(network_antes), # mesmo layout de network_antes
      groups = grupos,
-     theme = 'colorblind',
+     theme = 'gray',
      labels = colnames(itens_antes),
      #filename = 'figuras\\rede_2',
      #filetype = 'png',
      width = 1.4 * 5,
      height = 5,
      maximum = 0.658676) # valor obtido com max(abs(network_antes$graph))
+
+graph2ppt(file = 'network_durante')
 
 # Investigando acurácia da rede 2 - Pt. 1: BCa for edge weights ====
 boot1 <- bootnet(network_durante,
@@ -201,8 +251,12 @@ nct_results
 plot(nct_results, what = "network")
 plot(nct_results, what = "strength")
 
+# Comparando centralidade ====
+compareCentrality(network_antes,
+                  network_durante,
+                  include = 'ExpectedInfluence',
+                  legendName = 'Grafos',
+                  net1Name = 'Antes da pandemia',
+                  net2Name = 'Durante a pandemia')
 
-
-
-
-
+graph2ppt(file = 'influencia_esperada')
